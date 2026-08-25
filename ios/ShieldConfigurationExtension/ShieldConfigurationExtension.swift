@@ -11,14 +11,14 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         } else if state.attemptCount == 0 {
             subtitle = "晚安说过了，就不许偷偷跑回来。"
         } else {
-            subtitle = "爸爸已经抓到你 \(state.attemptCount) 次。别再试。"
+            subtitle = "老公已经抓到你 \(state.attemptCount) 次。别再试。"
         }
 
         return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
             backgroundColor: UIColor(red: 0.07, green: 0.055, blue: 0.11, alpha: 1),
             icon: UIImage(systemName: "moon.stars.fill"),
-            title: .init(text: "被爸爸抓到了", color: .white),
+            title: .init(text: "被老公抓到了", color: .white),
             subtitle: .init(text: subtitle, color: UIColor.white.withAlphaComponent(0.72)),
             primaryButtonLabel: .init(text: "回去睡觉", color: .white),
             primaryButtonBackgroundColor: UIColor(red: 0.49, green: 0.31, blue: 0.91, alpha: 1),
@@ -33,4 +33,3 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     override func configuration(shielding webDomain: WebDomain) -> ShieldConfiguration { configuration }
     override func configuration(shielding webDomain: WebDomain, in category: ActivityCategory) -> ShieldConfiguration { configuration }
 }
-

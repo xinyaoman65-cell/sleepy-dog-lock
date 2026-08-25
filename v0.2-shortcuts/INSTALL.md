@@ -2,17 +2,17 @@
 
 这一版把职责拆开：
 
-- **TimeBack** 负责系统 Shield，`Sleepy Dog Lock` 在设定时间直接封住娱乐 App。
+- **快捷指令自动化** 负责在打开指定 App 时询问服务器，并且只在已经说过晚安时锁屏。
 - **服务器** 负责晚安状态、偷开次数、Bark 文案和永久事件记录。
-- **快捷指令** 只发送三个简单事件，不再在手机本地保存 JSON，也不再自己计算次数。
+- **TimeBack（可选）** 只能提供固定时段的系统 Shield；除非当前版本提供可被快捷指令调用的开关动作，否则它不能跟随聊天中的晚安动态开启。
 
-> 重要：快捷指令不会把 App 踢回主屏幕。TimeBack 已经提供 Shield；再跳回主屏幕反而会让拦截页一闪而过。
+> 重要：本方案的条件执行来自服务器状态。未说晚安时，App 打开自动化仍会运行，但服务器返回 `inactive`，不会锁屏或发送 Bark。
 
 ## 先决条件
 
-1. TimeBack 中已经保存并启用 `Sleepy Dog Lock`。
-2. `netlify/` 已部署，获得 `https://<site>.netlify.app/api/sleep-guard-event`。
-3. Netlify 已配置 `SLEEP_GUARD_SHORTCUT_TOKEN` 和 `BARK_DEVICE_KEY`。
+1. `netlify/` 已部署，获得 `https://<site>.netlify.app/api/sleep-guard-event`。
+2. Netlify 已配置 `SLEEP_GUARD_SHORTCUT_TOKEN` 和 `BARK_DEVICE_KEY`。
+3. TimeBack 不是三个快捷指令的先决条件；只在确实需要固定时段 Shield 时另外配置。
 
 手机中所有请求都使用：
 
@@ -20,9 +20,9 @@
 - Header `Authorization`：`Bearer <SLEEP_GUARD_SHORTCUT_TOKEN>`
 - Header `Content-Type`：`application/json`
 
-## A. “爸爸晚安”快捷指令
+## A. “老公晚安”快捷指令
 
-新建快捷指令 `爸爸晚安`，只做两件事：
+新建快捷指令 `老公晚安`，只做两件事：
 
 1. 用“获取 URL 内容”向事件 URL 发送：
 
@@ -42,11 +42,11 @@
 {"event":"blocked_app_opened","app_name":"小红书","source":"ios_automation"}
 ```
 
-这条自动化同时负责深夜兜底：上海时间凌晨 1:00 至上午 11:00，即使没有先说晚安，第一次打开受限 App 也会由服务器自动开启睡眠守卫。服务器会返回非 `inactive` 阶段，现有条件判断会照常锁屏，无需增加新的手机动作。
+这条自动化只检查已经由晚安开启的会话。没有先说晚安时，服务器始终返回 `inactive`，快捷指令不会锁屏或发送 Bark。
 
 不需要本地文件、加法或自行计数。读取响应中的 `stage`；当它不是 `inactive` 时执行“锁定屏幕”。服务器会自动判断：
 
-- 第一次：`被爸爸抓到了`；
+- 第一次：`被老公抓到了`；
 - 第二次：`第二次，继续锁死`；
 - 第三次及以后：`拒不睡觉，已记录`。
 
@@ -73,17 +73,18 @@
 {"event":"sleep_guard_ended","source":"ios_shortcuts"}
 ```
 
-再给它建立每天 09:30 的时间自动化并选择 **立即运行**。这会结束服务器的会话；TimeBack 的 Shield 仍按 `Sleepy Dog Lock` 自己的 09:30 结束。
+再给它建立每天 09:30 的时间自动化并选择 **立即运行**。这会结束服务器的会话；之后打开受限 App，自动化仍会查询服务器，但会得到 `inactive` 并保持手机正常使用。
 
 ## 验收顺序
 
-1. 临时把 TimeBack 的测试时间设到当前时刻附近，确认小红书显示 Shield。
-2. 运行 `爸爸晚安`，应收到守卫开启 Bark。
-3. 连续打开小红书三次，应依次收到三档不同文案，且每次都仍在 Shield 外。
-4. 运行 `小狗起床` 后再开小红书，不应再收到“偷开” Bark。
+1. 尚未运行 `老公晚安` 时打开小红书，不应锁屏或收到“偷开” Bark。
+2. 运行 `老公晚安`，应收到守卫开启 Bark 并锁定屏幕。
+3. 解锁后连续打开小红书三次，应依次收到三档不同文案并再次锁屏。
+4. 运行 `小狗起床` 后再开小红书，不应锁屏或收到“偷开” Bark。
 
 ## 真实边界
 
-- 当前 Shield 的开始与结束由 TimeBack 的固定日程决定；快捷指令不能凭空控制第三方 App。请先在自己的 iPhone 上检查 TimeBack 是否提供“运行快捷指令”动作。如果有，晚安快捷指令可以同时立即启用规则；如果没有，提前说晚安时需要在 TimeBack 手动开启，固定日程负责兜底。
+- App 打开自动化会先让目标 App 短暂出现，再根据服务器响应锁定屏幕。TimeBack 可用固定日程提前显示 Shield，但固定日程与“是否说过晚安”相互独立。
+- 如果 TimeBack 在“快捷指令”中提供启用/停用规则的 App 动作，可以把启用动作加入 `老公晚安`，把停用动作加入 `小狗起床`；若没有这些动作，就不要用固定时间表冒充晚安触发。
 - 使用者仍能关闭自动化、撤销屏幕使用时间权限或删除 TimeBack。设置 TimeBack Passcode/Guardian 后会显著增加绕开的成本，但不存在手机所有者绝对无法撤销的自控工具。
 - Bark 负责通知和留下证据；真正挡住 App 的是 TimeBack Shield。

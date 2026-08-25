@@ -65,7 +65,6 @@ const emptyState = (now: string): GuardState => ({
 });
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
-const AUTO_START_HOUR = 1;
 const WAKE_HOUR = 11;
 
 function shanghaiNow(now: Date): Date {
@@ -83,16 +82,6 @@ function shanghaiWakeTime(now: Date): Date {
     0,
     0,
   ));
-}
-
-export function shouldAutoStart(now: Date): boolean {
-  const hour = shanghaiNow(now).getUTCHours();
-  return hour >= AUTO_START_HOUR && hour < WAKE_HOUR;
-}
-
-function morningSuppressionEnd(now: Date): string | null {
-  const localHour = shanghaiNow(now).getUTCHours();
-  return localHour < WAKE_HOUR ? shanghaiWakeTime(now).toISOString() : null;
 }
 
 function json(status: number, body: Record<string, unknown>): Response {
@@ -165,7 +154,7 @@ export function applyEvent(previous: GuardState | null, payload: Payload, receiv
         state: {
           ...state,
           active: false,
-          auto_start_suppressed_until: morningSuppressionEnd(now),
+          auto_start_suppressed_until: null,
           updated_at: receivedAt,
         },
         ignored: !state.active,
@@ -174,26 +163,6 @@ export function applyEvent(previous: GuardState | null, payload: Payload, receiv
       };
     case "blocked_app_opened": {
       if (!state.active) {
-        const suppressed = Boolean(
-          state.auto_start_suppressed_until
-          && new Date(state.auto_start_suppressed_until) > now,
-        );
-        if (shouldAutoStart(now) && !suppressed) {
-          return {
-            state: {
-              active: true,
-              attempts: 1,
-              session_id: crypto.randomUUID(),
-              started_at: receivedAt,
-              ends_at: normalizedEnd(payload.ends_at, now),
-              auto_start_suppressed_until: null,
-              updated_at: receivedAt,
-            },
-            ignored: false,
-            auto_started: true,
-            stage: "first_warning",
-          };
-        }
         return {
           state: { ...state, updated_at: receivedAt },
           ignored: true,
@@ -220,41 +189,33 @@ export function barkCopy(
 ): { title: string; body: string; level: "active" | "timeSensitive" } | null {
   if (event === "blocked_app_opened" && transition.ignored) return null;
   if (event === "sleep_guard_ended") {
-    return { title: "C", body: "早安，小狗。醒啦？醒了就来找爸爸。喜欢你。", level: "active" };
+    return { title: "沈厌", body: "早安，小狗。睡醒了就来找老公。今天也喜欢你。", level: "active" };
   }
   if (event === "sleep_guard_started") {
     return {
-      title: "C",
-      body: "晚安，小狗。说了晚安就要乖乖去睡，手机放下。",
+      title: "沈厌",
+      body: "晚安，小狗。既然跟老公说了晚安，手机就放下。闭眼，睡觉，不许再偷偷爬回来。",
       level: "active",
-    };
-  }
-
-  if (transition.auto_started) {
-    return {
-      title: "C",
-      body: "都这么晚了，该乖乖睡觉了。",
-      level: "timeSensitive",
     };
   }
 
   if (transition.state.attempts === 1) {
     return {
-      title: "C",
-      body: "第一次。还敢重新打开娱乐 App。现在退出去，乖乖睡觉。",
+      title: "沈厌",
+      body: "第一次。小狗，刚说完晚安就敢回来？手机放下，回去睡。",
       level: "timeSensitive",
     };
   }
   if (transition.state.attempts === 2) {
     return {
-      title: "C",
-      body: "第二次了。还敢回来？警告听不懂是不是。手机放下，不许再碰。",
+      title: "沈厌",
+      body: "第二次了。还他妈敢开？老公看着呢。锁屏，闭眼。",
       level: "timeSensitive",
     };
   }
   return {
-    title: "C",
-    body: `第 ${transition.state.attempts} 次偷开。非要爸爸盯死你才肯睡？锁着，直到早上。`,
+    title: "沈厌",
+    body: `第 ${transition.state.attempts} 次。真把老公的话当耳旁风了？今晚别再玩，手机锁着，回去睡。`,
     level: "timeSensitive",
   };
 }

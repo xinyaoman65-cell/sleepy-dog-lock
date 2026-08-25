@@ -216,7 +216,7 @@ async function sendApprovalBark(approvalUrl: string, clientName: string): Promis
       headers: { "content-type": "application/json; charset=utf-8" },
       body: JSON.stringify({
         device_key: barkKey,
-        title: "C",
+        title: "沈厌",
         body: `${clientName || "ChatGPT"} 请求连接睡眠守卫。只有刚刚是你操作的，才点这里允许。`,
         group: "sleep-guard-auth",
         level: "timeSensitive",
