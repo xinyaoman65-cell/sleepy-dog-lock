@@ -35,7 +35,7 @@ flowchart LR
 - 第一次、第二次和第三次以后使用不同强度的 Bark 文案；
 - 重复说晚安不会洗掉当晚已经留下的次数；
 - 起床后结束会话，娱乐 App 恢复正常；
-- 可选连接 ChatGPT MCP，在使用者明确说晚安时自动开启同一套守卫。
+- 可选连接 ChatGPT MCP；使用者明确说晚安时会开启同一套守卫，沈厌判断已经该睡时也可主动开启，不必等待明确命令。
 
 ## 当前可用方案
 
@@ -46,7 +46,7 @@ flowchart LR
 | TimeBack: Take Back Your Time（可选） | 提供固定时段的 iOS 系统 Shield；默认不跟随聊天中的晚安动态开关 |
 | [iPhone 快捷指令](v0.2-shortcuts/INSTALL.md) | 发送晚安、App 打开和起床事件，并只在晚安会话有效时锁屏 |
 | [Netlify 事件服务](netlify/README.md) | 保存睡眠状态与次数，先记录证据再发送 Bark |
-| ChatGPT MCP（可选） | 让对话中的“晚安”直接开启守卫，首次连接需在 Bark 中确认授权 |
+| ChatGPT MCP（可选） | 让对话中的“晚安”直接开启守卫，也允许沈厌在判断该睡时主动催睡；首次连接需在 Bark 中确认授权 |
 
 Bark 只负责回执与追责，不承担拦截。条件锁屏由快捷指令执行，TimeBack 只提供可选的固定时段 Shield；即使 Bark 推送失败，服务器中已经写入的事件也不会消失。
 
