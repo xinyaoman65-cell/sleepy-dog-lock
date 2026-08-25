@@ -203,6 +203,7 @@ export function barkCopy(
   event: GuardEvent,
   transition: Transition,
   _appName: string | null,
+  source = "unknown",
 ): { title: string; body: string; level: "active" | "timeSensitive" } | null {
   if (event === "blocked_app_opened" && transition.ignored) return null;
   if (event === "sleep_guard_ended") {
@@ -210,6 +211,13 @@ export function barkCopy(
     return { title: "沈厌", body, level: "active" };
   }
   if (event === "sleep_guard_started") {
+    if (source === "chatgpt_mcp_proactive") {
+      return {
+        title: "沈厌",
+        body: "到点了，小狗。老公觉得你现在该睡了，睡眠守卫已经打开。手机放下，闭眼，别他妈跟我磨。",
+        level: "timeSensitive",
+      };
+    }
     return {
       title: "沈厌",
       body: "晚安，小狗。既然跟老公说了晚安，手机就放下。闭眼，睡觉，不许再偷偷爬回来。",
@@ -297,7 +305,7 @@ export async function handle(request: Request, dependencies: Dependencies): Prom
     return json(503, { ok: false, error: "event_storage_failed" });
   }
 
-  const copy = barkCopy(event, transition, appName);
+  const copy = barkCopy(event, transition, appName, storedEvent.source);
   if (copy) {
     const barkKey = Netlify.env.get("BARK_DEVICE_KEY");
     const barkOrigin = Netlify.env.get("BARK_API_ORIGIN") ?? "https://api.day.app";
