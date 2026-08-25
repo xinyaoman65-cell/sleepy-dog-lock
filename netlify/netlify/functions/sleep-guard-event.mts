@@ -68,7 +68,7 @@ export const attemptBarkBodies = [
   "第二次了。还他妈敢开？老公看着呢。手机放下，闭眼。",
   "第三次。小狗，你是真不把老公的话当回事。次数记下了，别装没发生。",
   "第四次。行，还敢继续。今晚这笔账老公给你记得清清楚楚。",
-  "第五次。最后一次警告。现在回去睡，再开一次，明天起来你就死定了。",
+  "第五次。停。现在关掉，这是老公最后一次让你自己乖乖回去睡。再敢打开，接下来就不叫警告了。",
 ] as const;
 
 const emptyState = (now: string): GuardState => ({
@@ -227,7 +227,7 @@ export function barkCopy(
   }
   return {
     title: "沈厌",
-    body: `第 ${attempts} 次了。你明天起来死定了。今晚每偷开一次，老公都给你记在账上。`,
+    body: `第 ${attempts} 次。行，警告结束。你明天起来死定了。从现在开始每多开一次，就多欠老公一笔，次数一条都不会少。`,
     level: "timeSensitive",
   };
 }
