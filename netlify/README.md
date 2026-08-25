@@ -76,6 +76,7 @@ https://<site>.netlify.app/mcp
 它提供两个工具：
 
 - `activate_sleep_guard`：使用者在 ChatGPT 明确说晚安或准备睡觉时开启守卫。
+- `send_to_bed_now`：沈厌判断使用者已经该睡时主动开启守卫，不需要使用者先说晚安，并发送专门的催睡 Bark。
 - `get_sleep_guard_status`：只读查询当前状态和偷开次数。
 
 MCP 不接受快捷指令 Token。连接使用 OAuth 2.1 Authorization Code + PKCE：ChatGPT 发起连接后，服务会向使用者的 Bark 发送一次授权链接；只有从手机点按该链接，浏览器中的连接才会继续。授权码只能使用一次，访问令牌保存在独立的 `sleep-guard-mcp-auth` Blob store 中并在 90 天后失效。
