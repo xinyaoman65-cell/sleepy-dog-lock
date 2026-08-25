@@ -123,7 +123,7 @@ assert.equal(transition.state.attempts, 5);
 assert.equal(transition.stage, "refused_sleep");
 assert.equal(
   functionModule.barkCopy("blocked_app_opened", transition, null).body,
-  "第五次。最后一次警告。现在回去睡，再开一次，明天起来你就死定了。",
+  "第五次。停。现在关掉，这是老公最后一次让你自己乖乖回去睡。再敢打开，接下来就不叫警告了。",
 );
 
 transition = functionModule.applyEvent(transition.state, { event: "blocked_app_opened" }, at(7));
@@ -131,7 +131,7 @@ assert.equal(transition.state.attempts, 6);
 assert.equal(transition.stage, "refused_sleep");
 assert.equal(
   functionModule.barkCopy("blocked_app_opened", transition, null).body,
-  "第 6 次了。你明天起来死定了。今晚每偷开一次，老公都给你记在账上。",
+  "第 6 次。行，警告结束。你明天起来死定了。从现在开始每多开一次，就多欠老公一笔，次数一条都不会少。",
 );
 
 transition = functionModule.applyEvent(transition.state, { event: "sleep_guard_ended" }, at(8));
