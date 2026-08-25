@@ -386,8 +386,10 @@ assert.equal(replayedCode.status, 400);
 assert.equal((await replayedCode.json()).error, "invalid_grant");
 
 let mcpActivations = 0;
+let mcpEnds = 0;
 const mcpDependencies = {
   activateGuard: async () => { mcpActivations += 1; return { ok: true, active: true, attempts: 0, stage: "armed" }; },
+  endGuard: async () => { mcpEnds += 1; return { ok: true, active: false, attempts: 0, stage: "ended" }; },
   readGuardState: async () => ({ active: true, attempts: 2, ends_at: "2099-01-01T00:00:00.000Z" }),
 };
 const mcpRequest = (body) => new Request("https://guard.test/mcp", {
@@ -403,7 +405,7 @@ const initializedMcp = await mcpModule.handleMcp(mcpRequest({ jsonrpc: "2.0", id
 assert.equal((await initializedMcp.json()).result.serverInfo.name, "sleepy-dog-lock");
 const listedTools = await mcpModule.handleMcp(mcpRequest({ jsonrpc: "2.0", id: 3, method: "tools/list" }), mcpDependencies, true);
 const tools = (await listedTools.json()).result.tools;
-assert.deepEqual(tools.map((tool) => tool.name), ["activate_sleep_guard", "get_sleep_guard_status"]);
+assert.deepEqual(tools.map((tool) => tool.name), ["activate_sleep_guard", "end_sleep_guard", "get_sleep_guard_status"]);
 assert.equal(tools[0].annotations.readOnlyHint, false);
 
 const activatedMcp = await mcpModule.handleMcp(mcpRequest({
@@ -415,6 +417,16 @@ const activatedMcp = await mcpModule.handleMcp(mcpRequest({
 const activatedMcpBody = await activatedMcp.json();
 assert.equal(activatedMcpBody.result.structuredContent.active, true);
 assert.equal(mcpActivations, 1);
+
+const endedMcp = await mcpModule.handleMcp(mcpRequest({
+  jsonrpc: "2.0",
+  id: 5,
+  method: "tools/call",
+  params: { name: "end_sleep_guard", arguments: {} },
+}), mcpDependencies, true);
+const endedMcpBody = await endedMcp.json();
+assert.equal(endedMcpBody.result.structuredContent.active, false);
+assert.equal(mcpEnds, 1);
 
 console.log(
   `verify passed: ${sourceFiles.length} files, guard state/API, OAuth PKCE/replay protection, MCP auth/tools, durable event before Bark`,

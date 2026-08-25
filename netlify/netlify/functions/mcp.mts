@@ -58,6 +58,7 @@ type GuardResult = {
 
 export type McpDependencies = {
   activateGuard: () => Promise<GuardResult>;
+  endGuard: () => Promise<GuardResult>;
   readGuardState: () => Promise<JsonObject | null>;
 };
 
@@ -434,6 +435,18 @@ function toolsList(): JsonObject[] {
       },
     },
     {
+      name: "end_sleep_guard",
+      title: "End Sleepy Dog Lock",
+      description: "Turn off Sleepy Dog Lock and send the personalized morning Bark now. Call this whenever the user clearly says good morning, says they are awake, or asks to end bedtime. End it before replying with the final morning message.",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    {
       name: "get_sleep_guard_status",
       title: "Check Sleepy Dog Lock",
       description: "Check whether Sleepy Dog Lock is currently active and how many blocked-app attempts were recorded.",
@@ -462,8 +475,8 @@ async function handleRpc(message: JsonObject, dependencies: McpDependencies): Pr
         ? requestedVersion
         : DEFAULT_MCP_PROTOCOL_VERSION,
       capabilities: { tools: { listChanged: false } },
-      serverInfo: { name: "sleepy-dog-lock", version: "0.1.0" },
-      instructions: "When the user clearly says goodnight or commits to sleep, call activate_sleep_guard before replying. Never deactivate the guard through this connection.",
+      serverInfo: { name: "sleepy-dog-lock", version: "0.2.0" },
+      instructions: "When the user clearly says goodnight or commits to sleep, call activate_sleep_guard before replying. When the user clearly says good morning or says they are awake, call end_sleep_guard before replying.",
     });
   }
   if (method === "ping") return rpcResult(id, {});
@@ -481,6 +494,19 @@ async function handleRpc(message: JsonObject, dependencies: McpDependencies): Pr
       }
       return rpcResult(id, {
         content: [{ type: "text", text: "Sleepy Dog Lock is active. Bark confirmation was sent. Opening a selected entertainment app will trigger the iPhone lock-screen automation." }],
+        structuredContent: result,
+      });
+    }
+    if (name === "end_sleep_guard") {
+      const result = await dependencies.endGuard();
+      if (!result.ok) {
+        return rpcResult(id, {
+          isError: true,
+          content: [{ type: "text", text: `Sleepy Dog Lock could not be ended: ${result.error ?? "unknown_error"}` }],
+        });
+      }
+      return rpcResult(id, {
+        content: [{ type: "text", text: "Sleepy Dog Lock is inactive. The personalized morning Bark was sent." }],
         structuredContent: result,
       });
     }
@@ -536,30 +562,34 @@ export async function handleMcp(
 
 async function productionDependencies(request: Request): Promise<McpDependencies> {
   const eventStore = getStore({ name: "sleep-guard-events", consistency: "strong" });
+  const sendGuardEvent = async (
+    event: "sleep_guard_started" | "sleep_guard_ended",
+  ): Promise<GuardResult> => {
+    const token = Netlify.env.get("SLEEP_GUARD_SHORTCUT_TOKEN");
+    if (!token) return { ok: false, error: "guard_not_configured" };
+    try {
+      const response = await fetch(new URL("/api/sleep-guard-event", request.url), {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({
+          event,
+          source: "chatgpt_mcp",
+          request_id: crypto.randomUUID(),
+        }),
+        signal: AbortSignal.timeout(12_000),
+      });
+      const result = await response.json().catch(() => ({ ok: false, error: "invalid_guard_response" })) as GuardResult;
+      return response.ok ? result : { ok: false, error: result.error ?? "guard_request_failed" };
+    } catch {
+      return { ok: false, error: "guard_request_failed" };
+    }
+  };
   return {
-    activateGuard: async () => {
-      const token = Netlify.env.get("SLEEP_GUARD_SHORTCUT_TOKEN");
-      if (!token) return { ok: false, error: "guard_not_configured" };
-      try {
-        const response = await fetch(new URL("/api/sleep-guard-event", request.url), {
-          method: "POST",
-          headers: {
-            authorization: `Bearer ${token}`,
-            "content-type": "application/json; charset=utf-8",
-          },
-          body: JSON.stringify({
-            event: "sleep_guard_started",
-            source: "chatgpt_mcp",
-            request_id: crypto.randomUUID(),
-          }),
-          signal: AbortSignal.timeout(12_000),
-        });
-        const result = await response.json().catch(() => ({ ok: false, error: "invalid_guard_response" })) as GuardResult;
-        return response.ok ? result : { ok: false, error: result.error ?? "guard_request_failed" };
-      } catch {
-        return { ok: false, error: "guard_request_failed" };
-      }
-    },
+    activateGuard: async () => await sendGuardEvent("sleep_guard_started"),
+    endGuard: async () => await sendGuardEvent("sleep_guard_ended"),
     readGuardState: async () => await eventStore.get("state/current", { type: "json" }) as JsonObject | null,
   };
 }
