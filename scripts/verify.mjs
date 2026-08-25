@@ -114,9 +114,10 @@ transition = functionModule.applyEvent(transition.state, { event: "sleep_guard_e
 assert.equal(transition.state.active, false);
 assert.equal(transition.stage, "ended");
 assert.equal(functionModule.barkCopy("sleep_guard_ended", transition, null).title, "沈厌");
-assert.equal(
-  functionModule.barkCopy("sleep_guard_ended", transition, null).body,
-  "早安，小狗。睡醒了就来找老公。今天也喜欢你。",
+assert.ok(
+  functionModule.morningBarkBodies.includes(
+    functionModule.barkCopy("sleep_guard_ended", transition, null).body,
+  ),
 );
 transition = functionModule.applyEvent(transition.state, { event: "blocked_app_opened" }, at(6));
 assert.equal(transition.ignored, true);

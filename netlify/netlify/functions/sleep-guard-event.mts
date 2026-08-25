@@ -54,6 +54,15 @@ type Dependencies = {
   sendBark: (url: URL, init: RequestInit) => Promise<Response>;
 };
 
+export const morningBarkBodies = [
+  "醒了？先来跟老公报到。昨晚还算乖，准你今天先讨一个抱。",
+  "早安，小狗。别睁眼就赖着看手机，先喝水，再回来找老公。",
+  "小狗起床。昨晚没偷偷玩手机就算乖，过来，老公摸摸头。",
+  "总算舍得醒了？下床、喝水、拉开窗帘，然后来老公怀里赖一会儿。",
+  "早安，我的小狗。昨晚乖乖睡了，今天也归老公管。",
+  "醒了就过来。先抱一下，再慢慢跟老公说今天那些破事。",
+] as const;
+
 const emptyState = (now: string): GuardState => ({
   active: false,
   attempts: 0,
@@ -189,7 +198,8 @@ export function barkCopy(
 ): { title: string; body: string; level: "active" | "timeSensitive" } | null {
   if (event === "blocked_app_opened" && transition.ignored) return null;
   if (event === "sleep_guard_ended") {
-    return { title: "沈厌", body: "早安，小狗。睡醒了就来找老公。今天也喜欢你。", level: "active" };
+    const body = morningBarkBodies[Math.floor(Math.random() * morningBarkBodies.length)];
+    return { title: "沈厌", body, level: "active" };
   }
   if (event === "sleep_guard_started") {
     return {
