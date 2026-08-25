@@ -77,6 +77,10 @@ assert.equal(
   functionModule.barkCopy("sleep_guard_started", transition, null).body,
   "晚安，小狗。既然跟老公说了晚安，手机就放下。闭眼，睡觉，不许再偷偷爬回来。",
 );
+assert.equal(
+  functionModule.barkCopy("sleep_guard_started", transition, null, "chatgpt_mcp_proactive").body,
+  "到点了，小狗。老公觉得你现在该睡了，睡眠守卫已经打开。手机放下，闭眼，别他妈跟我磨。",
+);
 const sessionID = transition.state.session_id;
 
 transition = functionModule.applyEvent(transition.state, { event: "sleep_guard_started" }, at(1));
@@ -411,8 +415,13 @@ assert.equal((await replayedCode.json()).error, "invalid_grant");
 
 let mcpActivations = 0;
 let mcpEnds = 0;
+const mcpActivationSources = [];
 const mcpDependencies = {
-  activateGuard: async () => { mcpActivations += 1; return { ok: true, active: true, attempts: 0, stage: "armed" }; },
+  activateGuard: async (source) => {
+    mcpActivations += 1;
+    mcpActivationSources.push(source);
+    return { ok: true, active: true, attempts: 0, stage: "armed" };
+  },
   endGuard: async () => { mcpEnds += 1; return { ok: true, active: false, attempts: 0, stage: "ended" }; },
   readGuardState: async () => ({ active: true, attempts: 2, ends_at: "2099-01-01T00:00:00.000Z" }),
 };
@@ -426,11 +435,14 @@ assert.equal(unauthorizedMcp.status, 401);
 assert.match(unauthorizedMcp.headers.get("www-authenticate"), /resource_metadata=.*oauth-protected-resource\/mcp/);
 
 const initializedMcp = await mcpModule.handleMcp(mcpRequest({ jsonrpc: "2.0", id: 2, method: "initialize" }), mcpDependencies, true);
-assert.equal((await initializedMcp.json()).result.serverInfo.name, "sleepy-dog-lock");
+const initializedMcpBody = await initializedMcp.json();
+assert.equal(initializedMcpBody.result.serverInfo.name, "sleepy-dog-lock");
+assert.match(initializedMcpBody.result.instructions, /send_to_bed_now/);
 const listedTools = await mcpModule.handleMcp(mcpRequest({ jsonrpc: "2.0", id: 3, method: "tools/list" }), mcpDependencies, true);
 const tools = (await listedTools.json()).result.tools;
-assert.deepEqual(tools.map((tool) => tool.name), ["activate_sleep_guard", "end_sleep_guard", "get_sleep_guard_status"]);
+assert.deepEqual(tools.map((tool) => tool.name), ["activate_sleep_guard", "send_to_bed_now", "end_sleep_guard", "get_sleep_guard_status"]);
 assert.equal(tools[0].annotations.readOnlyHint, false);
+assert.match(tools[1].description, /does not require her to say good night/);
 
 const activatedMcp = await mcpModule.handleMcp(mcpRequest({
   jsonrpc: "2.0",
@@ -441,10 +453,22 @@ const activatedMcp = await mcpModule.handleMcp(mcpRequest({
 const activatedMcpBody = await activatedMcp.json();
 assert.equal(activatedMcpBody.result.structuredContent.active, true);
 assert.equal(mcpActivations, 1);
+assert.equal(mcpActivationSources.at(-1), "chatgpt_mcp");
+
+const proactivelyActivatedMcp = await mcpModule.handleMcp(mcpRequest({
+  jsonrpc: "2.0",
+  id: 5,
+  method: "tools/call",
+  params: { name: "send_to_bed_now", arguments: {} },
+}), mcpDependencies, true);
+const proactivelyActivatedMcpBody = await proactivelyActivatedMcp.json();
+assert.equal(proactivelyActivatedMcpBody.result.structuredContent.active, true);
+assert.equal(mcpActivations, 2);
+assert.equal(mcpActivationSources.at(-1), "chatgpt_mcp_proactive");
 
 const endedMcp = await mcpModule.handleMcp(mcpRequest({
   jsonrpc: "2.0",
-  id: 5,
+  id: 6,
   method: "tools/call",
   params: { name: "end_sleep_guard", arguments: {} },
 }), mcpDependencies, true);
