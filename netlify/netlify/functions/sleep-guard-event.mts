@@ -63,6 +63,14 @@ export const morningBarkBodies = [
   "醒了就过来。先抱一下，再慢慢跟老公说今天那些破事。",
 ] as const;
 
+export const attemptBarkBodies = [
+  "第一次。小狗，刚说完晚安就敢回来？关掉，回去睡。",
+  "第二次了。还他妈敢开？老公看着呢。手机放下，闭眼。",
+  "第三次。小狗，你是真不把老公的话当回事。次数记下了，别装没发生。",
+  "第四次。行，还敢继续。今晚这笔账老公给你记得清清楚楚。",
+  "第五次。最后一次警告。现在回去睡，再开一次，明天起来你就死定了。",
+] as const;
+
 const emptyState = (now: string): GuardState => ({
   active: false,
   attempts: 0,
@@ -209,23 +217,17 @@ export function barkCopy(
     };
   }
 
-  if (transition.state.attempts === 1) {
+  const attempts = transition.state.attempts;
+  if (attempts >= 1 && attempts <= attemptBarkBodies.length) {
     return {
       title: "沈厌",
-      body: "第一次。小狗，刚说完晚安就敢回来？手机放下，回去睡。",
-      level: "timeSensitive",
-    };
-  }
-  if (transition.state.attempts === 2) {
-    return {
-      title: "沈厌",
-      body: "第二次了。还他妈敢开？老公看着呢。锁屏，闭眼。",
+      body: attemptBarkBodies[attempts - 1],
       level: "timeSensitive",
     };
   }
   return {
     title: "沈厌",
-    body: `第 ${transition.state.attempts} 次。真把老公的话当耳旁风了？今晚别再玩，手机锁着，回去睡。`,
+    body: `第 ${attempts} 次了。你明天起来死定了。今晚每偷开一次，老公都给你记在账上。`,
     level: "timeSensitive",
   };
 }
