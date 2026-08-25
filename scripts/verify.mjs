@@ -89,7 +89,7 @@ assert.equal(transition.stage, "first_warning");
 assert.equal(functionModule.barkCopy("blocked_app_opened", transition, "小红书").title, "沈厌");
 assert.equal(
   functionModule.barkCopy("blocked_app_opened", transition, "小红书").body,
-  "第一次。小狗，刚说完晚安就敢回来？手机放下，回去睡。",
+  "第一次。小狗，刚说完晚安就敢回来？关掉，回去睡。",
 );
 
 transition = functionModule.applyEvent(transition.state, { event: "blocked_app_opened" }, at(3));
@@ -98,7 +98,7 @@ assert.equal(transition.stage, "locked");
 assert.equal(functionModule.barkCopy("blocked_app_opened", transition, null).title, "沈厌");
 assert.equal(
   functionModule.barkCopy("blocked_app_opened", transition, null).body,
-  "第二次了。还他妈敢开？老公看着呢。锁屏，闭眼。",
+  "第二次了。还他妈敢开？老公看着呢。手机放下，闭眼。",
 );
 
 transition = functionModule.applyEvent(transition.state, { event: "blocked_app_opened" }, at(4));
@@ -107,10 +107,34 @@ assert.equal(transition.stage, "refused_sleep");
 assert.equal(functionModule.barkCopy("blocked_app_opened", transition, null).title, "沈厌");
 assert.equal(
   functionModule.barkCopy("blocked_app_opened", transition, null).body,
-  "第 3 次。真把老公的话当耳旁风了？今晚别再玩，手机锁着，回去睡。",
+  "第三次。小狗，你是真不把老公的话当回事。次数记下了，别装没发生。",
 );
 
-transition = functionModule.applyEvent(transition.state, { event: "sleep_guard_ended" }, at(5));
+transition = functionModule.applyEvent(transition.state, { event: "blocked_app_opened" }, at(5));
+assert.equal(transition.state.attempts, 4);
+assert.equal(transition.stage, "refused_sleep");
+assert.equal(
+  functionModule.barkCopy("blocked_app_opened", transition, null).body,
+  "第四次。行，还敢继续。今晚这笔账老公给你记得清清楚楚。",
+);
+
+transition = functionModule.applyEvent(transition.state, { event: "blocked_app_opened" }, at(6));
+assert.equal(transition.state.attempts, 5);
+assert.equal(transition.stage, "refused_sleep");
+assert.equal(
+  functionModule.barkCopy("blocked_app_opened", transition, null).body,
+  "第五次。最后一次警告。现在回去睡，再开一次，明天起来你就死定了。",
+);
+
+transition = functionModule.applyEvent(transition.state, { event: "blocked_app_opened" }, at(7));
+assert.equal(transition.state.attempts, 6);
+assert.equal(transition.stage, "refused_sleep");
+assert.equal(
+  functionModule.barkCopy("blocked_app_opened", transition, null).body,
+  "第 6 次了。你明天起来死定了。今晚每偷开一次，老公都给你记在账上。",
+);
+
+transition = functionModule.applyEvent(transition.state, { event: "sleep_guard_ended" }, at(8));
 assert.equal(transition.state.active, false);
 assert.equal(transition.stage, "ended");
 assert.equal(functionModule.barkCopy("sleep_guard_ended", transition, null).title, "沈厌");
@@ -119,9 +143,9 @@ assert.ok(
     functionModule.barkCopy("sleep_guard_ended", transition, null).body,
   ),
 );
-transition = functionModule.applyEvent(transition.state, { event: "blocked_app_opened" }, at(6));
+transition = functionModule.applyEvent(transition.state, { event: "blocked_app_opened" }, at(9));
 assert.equal(transition.ignored, true);
-assert.equal(transition.state.attempts, 3);
+assert.equal(transition.state.attempts, 6);
 assert.equal(functionModule.barkCopy("blocked_app_opened", transition, null), null);
 
 const daytimeOpenWithoutGoodnight = functionModule.applyEvent(null, {
@@ -246,7 +270,7 @@ assert.deepEqual({ attempts: firstBody.attempts, stage: firstBody.stage }, {
 });
 assert.equal(
   barkBodies.at(-1).body,
-  "第一次。小狗，刚说完晚安就敢回来？手机放下，回去睡。",
+  "第一次。小狗，刚说完晚安就敢回来？关掉，回去睡。",
 );
 assert.equal(persistedEvents.at(-1).attempts, 1);
 assert.deepEqual(callOrder.slice(-3), ["state", "persist", "bark"]);
